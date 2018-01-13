@@ -70,22 +70,40 @@ public class Teleporter : MonoBehaviour {
         }
     }
     //CONSTRUCTON ZONE
-    public void TeleportTo(GameObject Traveler, Transform temp)
-    {
-
-    }
     enum TeleporCheckResult
     {
         Successful,
         WrongChannel,
         NotInWhiteList
     }
+    public void TeleportSend(GameObject Traveler)
+    {
+        List<GameObject> AvailableDestinations = new List<GameObject>();
+        foreach(GameObject Destination in GameObject.FindGameObjectsWithTag("TeleporterNode"))
+        {
+            if (Destination != gameObject)
+            {
+                TeleporCheckResult result = ChannelAndTagCheck(Traveler, Destination.GetComponent<Teleporter>());
+                if (result == TeleporCheckResult.Successful)
+                {
+                    AvailableDestinations.Add(Destination);
+                }
+            }
+        }
+        if (AvailableDestinations.Count > 0)
+        {
+            //call teleporthere on a random teleporter that was successful in channel and tag check
+            AvailableDestinations[Random.Range(0, AvailableDestinations.Count - 1)].GetComponent<Teleporter>().TeleportHere(Traveler);
+        }
+    }
+
     private TeleporCheckResult ChannelAndTagCheck(GameObject Traveler, Teleporter DestinationTeleporter)
     {
         if (DestinationTeleporter.GetChannel() == Channel)
         {
             if (DestinationTeleporter.GetReceivesAnyTag())
             {
+                //good channel and teleporter accepts any tag
                 return TeleporCheckResult.Successful;
             }
             else
@@ -94,24 +112,19 @@ public class Teleporter : MonoBehaviour {
                 {
                     if (WhiteListTag == DestinationTeleporter.tag)
                     {
-                        //good
+                        //good channel and traveler tag match
                         return TeleporCheckResult.Successful;
 
                     }
                 }
                 //not in whitelist
+                return TeleporCheckResult.NotInWhiteList;
             }
         }
         else
         {
-            //badchannel
-        }
-
-        Debug.Log("Test");
-        foreach (GameObject Destination in GameObject.FindGameObjectsWithTag("TeleporterNode"))
-        {
-            //Debug.Log(Destination);
-            //if (Destination.GetComponent<string>())
+            //wrong channel
+            return TeleporCheckResult.WrongChannel;
         }
     }
     public string GetChannel()
@@ -126,13 +139,8 @@ public class Teleporter : MonoBehaviour {
     {
         return ReceiveTagWhitelist;
     }
-    //END ZONE
-    //returns successfull in teleporting and finding a channel or tag
-    public void TeleportHere(GameObject Traveler)
+    void ResetRotation(GameObject Traveler)
     {
-        //find teleporters with the same channel
-        //look for tags/receive any tag to be enabled
-        //velocit changes 
         if (StopVelociy == TeleportAction.OnReceive || StopVelociy == TeleportAction.OnBoth)
         {
             Traveler.GetComponent<Rigidbody>().velocity = Vector3.zero;
@@ -141,6 +149,16 @@ public class Teleporter : MonoBehaviour {
         {
             Traveler.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
         }
+    }
+    //END ZONE
+    //returns successfull in teleporting and finding a channel or tag
+    public void TeleportHere(GameObject Traveler)
+    {
+        //find teleporters with the same channel
+        //look for tags/receive any tag to be enabled
+        //velocity changes 
+
+        ResetRotation(Traveler);
         //rotation changes and travel
         if (OnReceiveSetRotation == true)
         {
@@ -154,26 +172,40 @@ public class Teleporter : MonoBehaviour {
     }
     // Update is called once per frame
     void Update () {
-        if (TeleporterType != TeleporterBehaviorMode.Receiver && SendTriggerZone != null)
+        if (TeleporterType != TeleporterBehaviorMode.Receiver)
         {
-            ChannelAndTagCheck(gameObject.GetComponent<Teleporter>());
-            if (SendOnEnter == true)
+            if (SendTriggerZone != null)
             {
-                foreach (GameObject EnteredObject in SendTriggerZone.GetInteractors(TriggerState.Enter))
+                if (SendOnEnter == true)
                 {
-                    //teleport
-                    //find destination with tag and use the teleprt
-                    //EnteredObject.GetComponent<Transform>().SetPositionAndRotation(Destination.transform.position, Destination.transform.rotation);
-                    //ResetVelocity(EnteredObject);
+                    foreach (GameObject Traveler in SendTriggerZone.GetInteractors(TriggerState.Enter))
+                    {
+                        //teleport
+                        //find destination with tag and use the teleprt
+                        //EnteredObject.GetComponent<Transform>().SetPositionAndRotation(Destination.transform.position, Destination.transform.rotation);
+                        TeleportSend(Traveler);
+                    }
                 }
-            }
-            if (SendOnStay == true)
-            {
-
-            }
-            if (SendOnExit == true)
-            {
-
+                if (SendOnStay == true)
+                {
+                    foreach (GameObject Traveler in SendTriggerZone.GetInteractors(TriggerState.Stay))
+                    {
+                        //teleport
+                        //find destination with tag and use the teleprt
+                        //EnteredObject.GetComponent<Transform>().SetPositionAndRotation(Destination.transform.position, Destination.transform.rotation);
+                        TeleportSend(Traveler);
+                    }
+                }
+                if (SendOnExit == true)
+                {
+                    foreach (GameObject Traveler in SendTriggerZone.GetInteractors(TriggerState.Exit))
+                    {
+                        //teleport
+                        //find destination with tag and use the teleprt
+                        //EnteredObject.GetComponent<Transform>().SetPositionAndRotation(Destination.transform.position, Destination.transform.rotation);
+                        TeleportSend(Traveler);
+                    }
+                }
             }
         }
     }
