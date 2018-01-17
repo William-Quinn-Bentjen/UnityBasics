@@ -30,10 +30,12 @@ public class Teleporter : MonoBehaviour {
     public TriggerZone SendTriggerZone;
     [Tooltip("If left blank will use it's position")]
     public Transform ReceiveDestination;
-    [Tooltip("Stops rotational velocity when teleporting in and or out")]
+    [Tooltip("Stops velocity when teleporting out")]
+    public bool StopVelociyOnSend;
+    [Tooltip("Stops rotational velocity when sending and or receiving")]
     public TeleportAction StopAngularVelociy;
-    [Tooltip("Stops velocity when teleporting in and or out")]
-    public TeleportAction StopVelociy;
+    [Tooltip("When the teleporter receives a traveler what should it do with the traveler's velocity")]
+    public ReceiveVelocityBehavior ReceiveVelocity;
     [Tooltip("If enabled triggerzone will teleport thing that enters it.")]
     public bool SendOnEnter = true;
     [Tooltip("If enabled triggerzone will teleport thing that stays in it.")]
@@ -85,27 +87,28 @@ public class Teleporter : MonoBehaviour {
     }
     public void TeleportSend(GameObject Traveler)
     {
-        Debug.Log("send called");
         if (ReceivedList.Contains(Traveler) == false)
         {
             List<GameObject> AvailableDestinations = new List<GameObject>();
             foreach (GameObject Destination in GameObject.FindGameObjectsWithTag("TeleporterNode"))
             {
-                Debug.Log("teleporter found");
+                //make sure we aren't sending to the teleporter we sent from 
                 if (Destination != gameObject)
                 {
                     TeleporCheckResult result = ChannelAndTagCheck(Traveler, Destination.GetComponent<Teleporter>());
                     Debug.Log(result);
                     if (result == TeleporCheckResult.Successful)
                     {
-                        Debug.Log("found destination");
                         AvailableDestinations.Add(Destination);
                     }
                 }
             }
             if (AvailableDestinations.Count > 0)
             {
-                Debug.Log("choosing destination\n" + AvailableDestinations.Count);
+                if (StopVelociyOnSend == true)
+                {
+                    Traveler.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                }
                 //call teleporthere on a random teleporter that was successful in channel and tag check
                 AvailableDestinations[Random.Range(0, AvailableDestinations.Count - 1)].GetComponent<Teleporter>().TeleportHere(Traveler);
             }
@@ -168,16 +171,85 @@ public class Teleporter : MonoBehaviour {
     {
         return ReceiveTagWhitelist;
     }
+    //called on teleport here
     void ResetRotation(GameObject Traveler)
     {
-        if (StopVelociy == TeleportAction.OnReceive || StopVelociy == TeleportAction.OnBoth)
+        //local
+        if (ReceiveVelocity == ReceiveVelocityBehavior.NoVelocity)
         {
             Traveler.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.LocalUp)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = this.transform.up * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.LocalDown)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = (this.transform.up * -1) * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.LocalForward)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = this.transform.forward * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.LocalBackward)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = (this.transform.forward * -1) * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.LocalRight)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = this.transform.right * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.LocalLeft)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = (this.transform.right * -1) * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        //world 
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.WorldUp)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = Vector3.up * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.WorldDown)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = (Vector3.up * -1) * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.WorldForward)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = Vector3.forward * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.WorldBackward)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = (Vector3.forward * -1) * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.WorldRight)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = Vector3.right * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
+        }
+        else if (ReceiveVelocity == ReceiveVelocityBehavior.WorldLeft)
+        {
+            Traveler.GetComponent<Rigidbody>().velocity = (Vector3.right * -1) * Traveler.GetComponent<Rigidbody>().velocity.magnitude;
         }
         if (StopAngularVelociy == TeleportAction.OnReceive || StopAngularVelociy == TeleportAction.OnBoth)
         {
             Traveler.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
         }
+    }
+    public enum ReceiveVelocityBehavior
+    {
+        Unchanged,
+        NoVelocity,
+        LocalUp,
+        LocalDown,
+        LocalLeft,
+        LocalRight,
+        LocalForward,
+        LocalBackward,
+        WorldUp,
+        WorldDown,
+        WorldLeft,
+        WorldRight,
+        WorldForward,
+        WorldBackward,
+
     }
     //END ZONE
     //returns successfull in teleporting and finding a channel or tag
@@ -188,6 +260,8 @@ public class Teleporter : MonoBehaviour {
         //velocity changes 
 
         ResetRotation(Traveler);
+        
+        Debug.Log(Traveler.GetComponent<Rigidbody>().velocity.magnitude);
         //rotation changes and travel
         if (OnReceiveSetRotation == true)
         {
@@ -204,7 +278,6 @@ public class Teleporter : MonoBehaviour {
                 ReceivedList.Add(Traveler);
             }
         }
-        //
     }
     // Update is called once per frame
     void Update () {
