@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 
 public enum TriggerState
@@ -19,8 +20,13 @@ public enum OnOffToggle
 public class TriggerZone : MonoBehaviour {
 
     //public 
-    public bool VisibleAtStart = false;
     public List<string> InteractsWithTags;
+    [System.Serializable]
+    public class MyEvent : UnityEvent { }
+    public MyEvent OnEnter;
+    public MyEvent OnStay;
+    public MyEvent OnExit;
+    //public bool 
     //private
     private List<GameObject> Entered;
     private List<GameObject> Stayed;
@@ -31,11 +37,6 @@ public class TriggerZone : MonoBehaviour {
     void Start () {
         //set renderer to game objects renderer
         rend = GetComponent<Renderer>();
-        //make invisible if invisible is checked.
-        if (VisibleAtStart == false)
-        {
-            isVisible(OnOffToggle.Off);
-        }
 	}
 	public void isVisible(OnOffToggle set)
     {
@@ -58,8 +59,20 @@ public class TriggerZone : MonoBehaviour {
     }
 	// Update is called once per frame
 	void Update () {
+        if(Entered.Count > 0)
+        {
+            OnEnter.Invoke();
+        }
+        if (Stayed.Count > 0)
+        {
+            OnStay.Invoke();
+        }
+        if (Exited.Count > 0)
+        {
+            OnExit.Invoke();
+        }
 	}
-
+    //clear the lists 
     private void LateUpdate()
     {
         Entered = new List<GameObject>();
